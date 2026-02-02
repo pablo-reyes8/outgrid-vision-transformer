@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.experiments.heat_map_att_outlooker import *
+from experiments.heat_map_att_kernel3x3 import *
 from src.experiments.heat_map_att_grid import *
 
 

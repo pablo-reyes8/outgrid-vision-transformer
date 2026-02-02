@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train import build_dataloaders, build_model, load_yaml
 from src.experiments.heat_map_att_grid import plot_grid_attention_random
-from src.experiments.heat_map_att_outlooker import plot_outlooker_locality_random
+from experiments.heat_map_att_kernel3x3 import plot_outlooker_locality_random
 from src.experiments.mad_metrics import compute_grid_and_outlooker_mad_by_stage
 from src.training.chekpoints import load_checkpoint
 

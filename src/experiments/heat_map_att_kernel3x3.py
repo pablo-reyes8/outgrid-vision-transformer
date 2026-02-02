@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import random
 
 # ---------------------------
-# 1) Hook para capturar logits de OutlookAttention2d
+# 1) Hook para capturar logits de KernelAttention2d
 # ---------------------------
-class OutlookAttnCapturer:
+class KernelAttnCapturer:
     """
-    Captura la salida de la conv 'attn' dentro de cada módulo OutlookAttention2d.
+    Captura la salida de la conv 'attn' dentro de cada módulo KernelAttention2d.
     Guarda tensores de forma: (B, heads*k*k, H, W) con k=3 => heads*9 canales.
     """
     def __init__(self, model: torch.nn.Module):
@@ -23,7 +23,7 @@ class OutlookAttnCapturer:
         pat = re.compile(r"stages\.(\d+)\.(\d+)\.")
 
         for name, m in model.named_modules():
-            if m.__class__.__name__ == "OutlookAttention2d":
+            if m.__class__.__name__ == "KernelAttention2d":
                 conv = getattr(m, "attn", None)
                 if isinstance(conv, torch.nn.Conv2d):
                     key = name
@@ -157,11 +157,11 @@ def _fm_to_img_xy(y_f, x_f, H_f, W_f, H_img, W_img):
 
 
 @torch.no_grad()
-def plot_outlooker_locality_random(
+def plot_Attention_locality_random(
     model: torch.nn.Module,
     loader,
     device="cuda",
-    save_dir="./figures/outlooker_locality",
+    save_dir="./figures/Attention_locality",
     n_images=4,
     stages=(0, 1, 2, 3),
     block_idx=0,
@@ -175,7 +175,7 @@ def plot_outlooker_locality_random(
     overlay_alpha=0.45):
 
     """
-    Visualización cualitativa del Outlooker:
+    Visualización cualitativa del Attention:
       - Input
       - center-weight overlay
       - spread overlay
@@ -183,7 +183,7 @@ def plot_outlooker_locality_random(
 
     Requiere que ya existan en tu entorno:
       - _get_random_batch, _choose_random_indices
-      - OutlookAttnCapturer
+      - KernelAttnCapturer
       - _to_img_uint8, _upsample_map
       - _softmax_local, _center_and_spread
       - _pick_positions_from_map, _kernel_at
@@ -198,7 +198,7 @@ def plot_outlooker_locality_random(
     x = x_all[idxs]  # (n,3,H,W)
 
     # ---- capturar logits ----
-    cap = OutlookAttnCapturer(model)
+    cap = KernelAttnCapturer(model)
     _ = model(x)
 
     H_img, W_img = x.shape[-2], x.shape[-1]
@@ -209,7 +209,7 @@ def plot_outlooker_locality_random(
     for s in stages:
         attn_logits = cap.get(stage=s, block=block_idx)
         if attn_logits is None:
-            print(f"[WARN] No se capturó Outlooker attn en stage={s}, block={block_idx}.")
+            print(f"[WARN] No se capturó Attention attn en stage={s}, block={block_idx}.")
             continue
 
         w = _softmax_local(attn_logits, k2=9)
@@ -257,7 +257,7 @@ def plot_outlooker_locality_random(
                 alpha=overlay_alpha,
                 vmin=cmin, vmax=cmax)
 
-            axes[i, 1].set_title("Outlooker: center-weight")
+            axes[i, 1].set_title("Attention: center-weight")
             axes[i, 1].axis("off")
             if mappable_center is None:
                 mappable_center = m1
@@ -269,7 +269,7 @@ def plot_outlooker_locality_random(
                 alpha=overlay_alpha,
                 vmin=smin, vmax=smax )
 
-            axes[i, 2].set_title("Outlooker: spread (1-max)")
+            axes[i, 2].set_title("Attention: spread (1-max)")
             axes[i, 2].axis("off")
             if mappable_spread is None:
                 mappable_spread = m2
@@ -318,14 +318,14 @@ def plot_outlooker_locality_random(
             if mappable_k is None:
                 mappable_k = imk
 
-        fig.suptitle(f"Outlooker Locality (random batch) — stage={s} block={block_idx}", y=0.995, fontsize=14)
+        fig.suptitle(f"Attention Locality (random batch) — stage={s} block={block_idx}", y=0.995, fontsize=14)
         fig.tight_layout()
 
         fig.colorbar(mappable_center, ax=axes[:, 1].ravel().tolist(), fraction=0.015, pad=0.01)
         fig.colorbar(mappable_spread, ax=axes[:, 2].ravel().tolist(), fraction=0.015, pad=0.01)
         fig.colorbar(mappable_k,      ax=axes[:, 3:].ravel().tolist(), fraction=0.015, pad=0.01)
 
-        out_path = os.path.join(save_dir, f"outlooker_locality_stage{s}_block{block_idx}_random.png")
+        out_path = os.path.join(save_dir, f"Attention_locality_stage{s}_block{block_idx}_random.png")
         fig.savefig(out_path, bbox_inches="tight")
         saved_paths.append(out_path)
 
