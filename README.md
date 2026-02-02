@@ -1,5 +1,7 @@
 # OutGridViT: Outlook-Grid Vision Transformer
 
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![Repo size](https://img.shields.io/github/repo-size/pablo-reyes8/outlook-grid-vision-transformer)
 ![Last commit](https://img.shields.io/github/last-commit/pablo-reyes8/outlook-grid-vision-transformer)
 ![Open issues](https://img.shields.io/github/issues/pablo-reyes8/outlook-grid-vision-transformer)
@@ -8,9 +10,9 @@
 ![Stars](https://img.shields.io/github/stars/pablo-reyes8/outlook-grid-vision-transformer?style=social)
 
 
-OutGridViT is a research-focused hybrid vision architecture that fuses **Outlooker** local attention (VOLO-style), **MBConv** inductive bias, and **Grid Attention** (MaxViT-style). The core design is Model A, where *every block* injects dynamic local aggregation before global mixing.
+OutGridViT is a research-focused hybrid vision architecture that fuses **Outlooker** local attention (VOLO-style), **MBConv** inductive bias, and **Grid Attention**. The core design is Model A, where *every block* injects dynamic local aggregation before global mixing.
 
-This repo contains the full training stack, ablations, baseline comparisons, and analysis tools (MAD metrics + attention visualizations).
+This repo contains the full training stack, ablations, baseline comparisons, and analysis tools (MAD metrics + Entropy + attention mechanisms visualizations).
 
 ## Table of Contents
 
@@ -33,7 +35,7 @@ This repo contains the full training stack, ablations, baseline comparisons, and
 - [Notes](#notes)
 - [Citation](#citation)
 
-## Model A (Main Architecture)
+## Model (Main Architecture)
 
 **Block composition (OutGridBlock):**
 `Outlooker -> MBConv -> GridAttn -> MLP`
@@ -293,6 +295,6 @@ Overall, the model provides a **practical hybrid inductive bias** that is compet
 - Outlooker kernel size must be odd and > 0.
 - NCHW for conv/outlook, BHWC for grid attention.
 
-## Citation
 
-If you use this code or ideas, cite VOLO and MaxViT.
+## License
+This project is distributed under the [MIT License](LICENSE). Feel free to use it in research or production with attribution.
