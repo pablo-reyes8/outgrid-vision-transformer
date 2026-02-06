@@ -38,7 +38,7 @@ This repo contains the full training stack, ablations, baseline comparisons, and
 ## Model (Main Architecture)
 
 **Block composition (OutGridBlock):**
-`Outlooker -> MBConv -> GridAttn -> MLP`
+`Dynamic 3x3 Kernel -> MBConv -> GridAttn -> MLP`
 
 Input/output stays in 2D feature maps (NCHW). Only the GridAttn path temporarily uses BHWC and tokenized grids.
 
