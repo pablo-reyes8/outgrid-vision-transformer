@@ -10,7 +10,7 @@
 ![Stars](https://img.shields.io/github/stars/pablo-reyes8/outlook-grid-vision-transformer?style=social)
 
 
-OutGridViT is a research-focused hybrid vision architecture that fuses **Outlooker** local attention (VOLO-style), **MBConv** inductive bias, and **Grid Attention**. The core design is Model A, where *every block* injects dynamic local aggregation before global mixing.
+OutGridViT is a research-focused hybrid vision architecture that fuses **Dynamic Kernels** local attention (VOLO-style), **MBConv** inductive bias, and **Grid Attention**. The core design is Model A, where *every block* injects dynamic local aggregation before global mixing.
 
 This repo contains the full training stack, ablations, baseline comparisons, and analysis tools (MAD metrics + Entropy + attention mechanisms visualizations).
 
@@ -48,7 +48,7 @@ Input: `x in R^{B x C x H x W}`
 
 $$
 \begin{aligned}
- x_1 &= \mathrm{Outlooker}(x) \\ 
+ x_1 &= \mathrm{Dynamic Kernel}(x) \\ 
  x_2 &= \mathrm{MBConv}(x_1) \\ 
  \hat{x}_2 &= \mathrm{permute}(x_2) \\ 
  y &= \hat{x}_2 + \mathrm{DP}(\mathrm{GridAttn}(\mathrm{LN}(\hat{x}_2))) \\ 
@@ -72,13 +72,13 @@ $$
 
 ## Visual Experiments
 
-Outlooker behaves like a **dynamic 3x3 kernel** per position, while Grid Attention provides more global mixing per block. Below are sample overlays produced by the analysis pipeline.
+Dynamic Kernel behaves like a **dynamic 3x3 kernel** per position, while Grid Attention provides more global mixing per block. Below are sample overlays produced by the analysis pipeline.
 
-Outlooker locality (kernel weights + center/spread overlays):
+Dynamic Kernel locality (kernel weights + center/spread overlays):
 
 ![Outlooker locality example](experiments_results/Visual%20Experiments/normal_example_outlooker/stage1_block_0.png)
 
-More Outlooker examples (different stages/blocks):
+More Kernel examples (different stages/blocks):
 
 | Example A | Example B |
 | --- | --- |
@@ -159,7 +159,7 @@ Robustness evaluation (mean top-1 across corruptions; higher is better). Full lo
 
 </div>
 
-## MAD + Entropy Metrics (Grid vs Outlooker)
+## MAD + Entropy Metrics (Grid vs Dynamic Kernels)
 
 <div align="center">
 
@@ -172,7 +172,7 @@ Quantitative summary (CIFAR-100, Model A). `GRID_abs` is L1 distance in feature-
 | 2 | 16 x 16 | 7.89 ± 0.18 | 1.67 ± 0.24 | 0.943 ± 0.011 | 0.850 ± 0.046 |
 | 3 | 8 x 8 | 4.48 ± 0.33 | 1.73 ± 0.14 | 0.801 ± 0.054 | 0.814 ± 0.076 |
 
-*Interpretation: Outlooker stays strictly local, while Grid attention spreads wider and is more entropic in mid stages (1-2).*
+*Interpretation: Dynamic Kernels stays strictly local, while Grid attention spreads wider and is more entropic in mid stages (1-2).*
 *Numbers from `experiments_results/Cuantitaive Experiments/mad_entropy.ipynb`.*
 
 </div>
@@ -251,7 +251,7 @@ Baselines included:
 ## Attention Analysis and MAD Metrics
 
 The analysis CLI generates:
-- Outlooker locality visualizations
+- Dynamic Kernel locality visualizations
 - Grid attention heatmaps
 - MAD metrics for both attention paths
 
@@ -283,16 +283,16 @@ tests/            # pytest suite
 
 ## Conclusion
 
-OutGridViT shows that injecting **local dynamic aggregation (Outlooker)** inside every block, followed by **MBConv** and **Grid Attention**, yields a strong accuracy/compute trade-off. On CIFAR-100 (32x32), the 7.5M-parameter variant reaches **79.72 Top-1** while keeping FLOPs competitive with larger baselines. The convergence plots indicate stable training, and TinyImageNet-C results suggest better robustness than heavier transformer baselines at similar or higher compute.
+OutGridViT shows that injecting **local dynamic aggregation (Dynamic Kernels)** inside every block, followed by **MBConv** and **Grid Attention**, yields a strong accuracy/compute trade-off. On CIFAR-100 (32x32), the 7.5M-parameter variant reaches **79.72 Top-1** while keeping FLOPs competitive with larger baselines. The convergence plots indicate stable training, and TinyImageNet-C results suggest better robustness than heavier transformer baselines at similar or higher compute.
 
-The MAD + entropy analysis supports the architectural intent: **Outlooker remains highly local**, while **Grid attention spreads broader mixing**, especially in mid stages. This hybrid behavior is consistent with the qualitative attention maps and explains why the model captures both local texture and global structure without a full ViT token pipeline.
+The MAD + entropy analysis supports the architectural intent: **Dynamic Kernels remains highly local**, while **Grid attention spreads broader mixing**, especially in mid stages. This hybrid behavior is consistent with the qualitative attention maps and explains why the model captures both local texture and global structure without a full ViT token pipeline.
 
 Overall, the model provides a **practical hybrid inductive bias** that is competitive under limited compute and should serve as a solid base for further scaling or low-GPU research settings.
 
 ## Notes
 
 - Grid attention requires `H` and `W` divisible by `grid_size`.
-- Outlooker kernel size must be odd and > 0.
+- Dynamic Kernels kernel size must be odd and > 0.
 - NCHW for conv/outlook, BHWC for grid attention.
 
 
