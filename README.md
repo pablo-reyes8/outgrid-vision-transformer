@@ -64,7 +64,7 @@ $$
 $$
 \begin{aligned}
  x_0 &= \mathrm{Stem}(x) \\ 
- x_{s,i+1} &= \mathrm{Dynamic Kernel}(x_{s,i}), \quad i=0..(d_s-1) \\ 
+ x_{s,i+1} &= \mathrm{OutGrid}(x_{s,i}), \quad i=0..(d_s-1) \\ 
  x_{s+1,0} &= \mathrm{Downsample}_s(x_{s,d_s}) \\ 
  \mathrm{logits} &= \mathrm{Linear}(\mathrm{GAP}(\mathrm{BN}(x_{S,d_S})))
 \end{aligned}
