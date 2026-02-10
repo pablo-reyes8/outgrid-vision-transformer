@@ -53,7 +53,7 @@ $$
  \hat{x}_2 &= \mathrm{permute}(x_2) \\ 
  y &= \hat{x}_2 + \mathrm{DP}(\mathrm{GridAttn}(\mathrm{LN}(\hat{x}_2))) \\ 
  z &= y + \mathrm{DP}(\mathrm{MLP}(\mathrm{LN}(y))) \\ 
- \mathrm{Dynamic Kernel}(x) &= \mathrm{permute}^{-1}(z)
+ \mathrm{OutGrid}(x) &= \mathrm{permute}^{-1}(z)
 \end{aligned}
 $$
 
