@@ -53,7 +53,7 @@ $$
  \hat{x}_2 &= \mathrm{permute}(x_2) \\ 
  y &= \hat{x}_2 + \mathrm{DP}(\mathrm{GridAttn}(\mathrm{LN}(\hat{x}_2))) \\ 
  z &= y + \mathrm{DP}(\mathrm{MLP}(\mathrm{LN}(y))) \\ 
- \mathrm{Dynamic Kernel}(x) &= \mathrm{permute}^{-1}(z)
+ \mathrm{OutGrid}(x) &= \mathrm{permute}^{-1}(z)
 \end{aligned}
 $$
 
@@ -64,7 +64,7 @@ $$
 $$
 \begin{aligned}
  x_0 &= \mathrm{Stem}(x) \\ 
- x_{s,i+1} &= \mathrm{Dynamic Kernel}(x_{s,i}), \quad i=0..(d_s-1) \\ 
+ x_{s,i+1} &= \mathrm{OutGrid}(x_{s,i}), \quad i=0..(d_s-1) \\ 
  x_{s+1,0} &= \mathrm{Downsample}_s(x_{s,d_s}) \\ 
  \mathrm{logits} &= \mathrm{Linear}(\mathrm{GAP}(\mathrm{BN}(x_{S,d_S})))
 \end{aligned}
