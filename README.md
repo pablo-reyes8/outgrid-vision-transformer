@@ -297,4 +297,4 @@ Overall, the model provides a **practical hybrid inductive bias** that is compet
 
 
 ## License
-This project is distributed under the [MIT License](LICENSE). Feel free to use it in research or production with attribution.
+This project is distributed under the [MIT License](LICENSE). Feel free to use it in research, production or just experimentation with attribution.
