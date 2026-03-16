@@ -45,9 +45,7 @@ def _make_stages():
             ffn_drop=0.0,
             drop_path=0.0,
             mlp_ratio=2.0,
-            mlp_act="gelu",
-        ),
-    ]
+            mlp_act="gelu",),]
 
 
 def _assert_logits(logits: torch.Tensor, batch: int, num_classes: int):
@@ -61,8 +59,7 @@ def test_model_a_forward():
         num_classes=10,
         stages=stages,
         stem_dim=16,
-        dpr_max=0.0,
-    )
+        dpr_max=0.0,)
 
     x = torch.randn(2, 3, 8, 8)
     y = model(x)
@@ -76,8 +73,7 @@ def test_model_b_forward():
         stages=stages,
         stem_dim=16,
         outlooker_front_depth=1,
-        dpr_max=0.0,
-    )
+        dpr_max=0.0,)
 
     x = torch.randn(2, 3, 8, 8)
     y = model(x)
