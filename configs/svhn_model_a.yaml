@@ -65,5 +65,5 @@ data:
 
 runtime:
   device: cuda
-  seed: 7
+  seed: 77
   output_dir: outputs

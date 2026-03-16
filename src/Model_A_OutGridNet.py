@@ -4,8 +4,6 @@ from src.model.stem_head import *
 from src.stage_config import *
 
 
-
-
 class MaxOutNet(nn.Module):
     """
     Modelo A:
