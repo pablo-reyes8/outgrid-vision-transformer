@@ -28,6 +28,12 @@ model:
 
 training:
   epochs: 50
+  optimizer: adamw
+  optimizer_betas: [0.9, 0.999]
+  optimizer_eps: 0.00000001
+  optimizer_momentum: 0.9
+  optimizer_nesterov: false
+  scheduler: warmup_cosine
   lr: 0.0005
   weight_decay: 0.05
   autocast_dtype: fp16
@@ -56,14 +62,22 @@ data:
   batch_size: 64
   num_workers: 2
   val_split: 0.1
-  seed: 7
   pin_memory: true
-  ra_num_ops: 2
-  ra_magnitude: 7
-  random_erasing_p: 0.25
   img_size: 32
+  drop_last: false
+  augmentation:
+    random_crop: true
+    horizontal_flip: true
+    randaugment: true
+    ra_num_ops: 2
+    ra_magnitude: 7
+    random_erasing: true
+    random_erasing_p: 0.25
 
 runtime:
   device: cuda
   seed: 7
+  deterministic: true
   output_dir: outputs
+  evaluate_test: true
+  load_best_for_test: true

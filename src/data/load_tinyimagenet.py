@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 from pathlib import Path
 
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, Subset
 from torchvision import transforms
 from torchvision.transforms import RandAugment
 
@@ -24,6 +24,7 @@ def seed_worker(worker_id: int):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
+    torch.manual_seed(worker_seed)
 
 
 class HFTorchImageDataset(Dataset):
@@ -80,6 +81,10 @@ def get_tinyimagenet200_hf_datasets(
     random_erasing_p: float = 0.25,
     erasing_scale=(0.02, 0.20),
     erasing_ratio=(0.3, 3.3),
+    random_crop: bool = True,
+    horizontal_flip: bool = True,
+    randaugment: bool = True,
+    random_erasing: bool = True,
     img_size: int = 64,
     seed: int = 7,   
 ):
@@ -105,18 +110,22 @@ def get_tinyimagenet200_hf_datasets(
     train_ops = []
     if img_size != 64:
         train_ops.append(transforms.Resize(img_size, interpolation=transforms.InterpolationMode.BICUBIC))
+    if random_crop:
+        train_ops.append(transforms.RandomCrop(img_size, padding=crop_padding))
+    if horizontal_flip:
+        train_ops.append(transforms.RandomHorizontalFlip())
+    if randaugment:
+        train_ops.append(RandAugment(num_ops=ra_num_ops, magnitude=ra_magnitude))
     train_ops += [
-        transforms.RandomCrop(img_size, padding=crop_padding),
-        transforms.RandomHorizontalFlip(),
-        RandAugment(num_ops=ra_num_ops, magnitude=ra_magnitude),
         transforms.ToTensor(),
-        transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-        transforms.RandomErasing(
+        transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),]
+    if random_erasing:
+        train_ops.append(transforms.RandomErasing(
             p=random_erasing_p,
             scale=erasing_scale,
             ratio=erasing_ratio,
             value="random",
-        ),]
+        ))
     
     train_transform = transforms.Compose(train_ops)
 
@@ -130,19 +139,17 @@ def get_tinyimagenet200_hf_datasets(
     test_transform = transforms.Compose(test_ops)
 
     train_full = HFTorchImageDataset(train_split, transform=train_transform)
+    val_full = HFTorchImageDataset(train_split, transform=test_transform)
 
     if val_split > 0.0:
+        if not 0.0 < val_split < 1.0:
+            raise ValueError(f"val_split must be in [0, 1). Got {val_split}.")
         n_total = len(train_full)
         n_val = int(n_total * val_split)
-        n_train = n_total - n_val
-
-        g_split = torch.Generator().manual_seed(seed) 
-
-        train_ds, val_ds = random_split(
-            train_full,
-            [n_train, n_val],
-            generator=g_split,
-        )
+        indices = torch.randperm(
+            n_total, generator=torch.Generator().manual_seed(seed)).tolist()
+        train_ds = Subset(train_full, indices[n_val:])
+        val_ds = Subset(val_full, indices[:n_val])
 
         if official_val_split is not None:
             test_ds = HFTorchImageDataset(official_val_split, transform=test_transform)
@@ -167,6 +174,10 @@ def get_tinyimagenet200_hf_dataloaders(
     ra_num_ops: int = 2,
     ra_magnitude: int = 7,
     random_erasing_p: float = 0.25,
+    random_crop: bool = True,
+    horizontal_flip: bool = True,
+    randaugment: bool = True,
+    random_erasing: bool = True,
     img_size: int = 64,
     drop_last: bool = True,
     seed: int = 7,):
@@ -178,23 +189,25 @@ def get_tinyimagenet200_hf_dataloaders(
         ra_num_ops=ra_num_ops,
         ra_magnitude=ra_magnitude,
         random_erasing_p=random_erasing_p,
+        random_crop=random_crop,
+        horizontal_flip=horizontal_flip,
+        randaugment=randaugment,
+        random_erasing=random_erasing,
         img_size=img_size,
         seed=seed)
-
-    g_loader = torch.Generator().manual_seed(seed + 1) 
 
     common_loader_kwargs = dict(
         num_workers=num_workers,
         pin_memory=pin_memory,
         persistent_workers=(num_workers > 0),
-        worker_init_fn=seed_worker,  
-        generator=g_loader,)
+        worker_init_fn=seed_worker)
 
     train_loader = DataLoader(
         train_ds,
         batch_size=batch_size,
         shuffle=True,
         drop_last=drop_last,
+        generator=torch.Generator().manual_seed(seed + 1),
         **common_loader_kwargs,)
 
     val_loader = None
@@ -203,6 +216,7 @@ def get_tinyimagenet200_hf_dataloaders(
             val_ds,
             batch_size=batch_size,
             shuffle=False,
+            generator=torch.Generator().manual_seed(seed + 2),
             **common_loader_kwargs)
 
     test_loader = None
@@ -211,6 +225,7 @@ def get_tinyimagenet200_hf_dataloaders(
             test_ds,
             batch_size=batch_size,
             shuffle=False,
+            generator=torch.Generator().manual_seed(seed + 3),
             **common_loader_kwargs,)
 
     return train_loader, val_loader, test_loader

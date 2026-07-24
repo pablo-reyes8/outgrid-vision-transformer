@@ -90,7 +90,7 @@ def train_one_epoch(
 
         # loss in fp32
         if (mixup_alpha > 0.0) or (cutmix_alpha > 0.0):
-            # With mixup/cutmix, label smoothing is usually redundant.
+            targets_soft = smooth_soft_targets(targets_soft, label_smoothing)
             loss = soft_target_cross_entropy(logits.float(), targets_soft)
         else:
             loss = F.cross_entropy(logits.float(), targets, label_smoothing=label_smoothing)

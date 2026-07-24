@@ -3,14 +3,13 @@ import sys
 from pathlib import Path
 
 import torch
-import torch.nn as nn
-import timm
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.data.load_cifrar100 import get_cifar100_dataloaders
+from src.timm_baselines import build_timm_baseline, list_timm_baselines
 from src.training.autocast import seed_everything
 from src.training.train_full_model import train_model
 
@@ -23,119 +22,11 @@ def _count_params(model: torch.nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def build_baseline_model(name: str, num_classes: int, img_size: int, device: str) -> torch.nn.Module:
-    key = name.lower()
-
-    if key in ("deit_tiny_patch4", "deit_tiny"):
-        model = timm.create_model(
-            "deit_tiny_patch16_224",
-            pretrained=False,
-            num_classes=num_classes,
-            img_size=img_size,
-            patch_size=4,)
-        
-    elif key in ("deit_small_patch4", "deit_small"):
-        model = timm.create_model(
-            "deit_small_patch16_224",
-            pretrained=False,
-            num_classes=num_classes,
-            img_size=img_size,
-            patch_size=4,)
-        
-    elif key in ("swin_tiny_patch2", "swin_tiny"):
-        model = timm.create_model(
-            "swin_tiny_patch4_window7_224",
-            pretrained=False,
-            num_classes=num_classes,
-            img_size=img_size,
-            window_size=4,)
-        
-        current_dim = model.patch_embed.proj.out_channels
-        model.patch_embed.proj = nn.Conv2d(
-            in_channels=3,
-            out_channels=current_dim,
-            kernel_size=2,
-            stride=2,)
-        
-        model.patch_embed.patch_size = (2, 2)
-    elif key in ("maxvit_tiny_cifar", "maxvit_tiny"):
-        model = timm.create_model(
-            "maxvit_tiny_tf_224",
-            pretrained=False,
-            num_classes=num_classes,
-            img_size=img_size,)
-        
-        in_ch_1 = model.stem.conv1.in_channels
-        out_ch_1 = model.stem.conv1.out_channels
-        model.stem.conv1 = nn.Conv2d(
-            in_ch_1,
-            out_ch_1,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False,)
-        
-        in_ch_2 = model.stem.conv2.in_channels
-        out_ch_2 = model.stem.conv2.out_channels
-        model.stem.conv2 = nn.Conv2d(
-            in_ch_2,
-            out_ch_2,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False,)
-        
-    elif key in ("maxvit_nano_cifar", "maxvit_nano"):
-        model = timm.create_model(
-            "maxvit_tiny_tf_224",
-            pretrained=False,
-            num_classes=num_classes,
-            img_size=img_size,
-            embed_dim=[64, 96, 192, 384],)
-        
-        model.stem.conv1 = nn.Conv2d(
-            in_channels=3,
-            out_channels=64,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False,)
-        
-        model.stem.norm1 = nn.BatchNorm2d(num_features=64, eps=1e-3, momentum=0.1)
-        model.stem.conv2 = nn.Conv2d(
-            in_channels=64,
-            out_channels=64,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False,)
-    elif key in ("resnet18", "resnet18_cifar"):
-        model = timm.create_model(
-            "resnet18",
-            pretrained=False,
-            num_classes=num_classes,)
-
-        model.conv1 = nn.Conv2d(
-            in_channels=3,
-            out_channels=model.conv1.out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False,)
-        model.maxpool = nn.Identity()
-    else:
-        raise ValueError(
-            "Unknown model name. Use one of: deit_tiny_patch4, deit_small_patch4, "
-            "swin_tiny_patch2, maxvit_tiny_cifar, maxvit_nano_cifar, resnet18_cifar.")
-
-    return model.to(device)
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train CIFAR-100 baselines (CIFAR-32 setup)")
     parser.add_argument(
         "--models",
-        default="deit_tiny_patch4,deit_small_patch4,swin_tiny_patch2,maxvit_nano_cifar,maxvit_tiny_cifar,resnet18_cifar",
+        default=",".join(list_timm_baselines()),
         help="Comma-separated list of baseline models",
     )
     parser.add_argument("--device", default="cuda")
@@ -183,7 +74,7 @@ def main() -> int:
 
     for name in model_names:
         print(f"\n=== Baseline: {name} ===")
-        seed_everything(args.seed, deterministic=False)
+        seed_everything(args.seed, deterministic=True)
 
         train_loader, val_loader, _ = get_cifar100_dataloaders(
             batch_size=args.batch_size,
@@ -194,7 +85,8 @@ def main() -> int:
             seed=args.seed,
         )
 
-        model = build_baseline_model(name, num_classes=100, img_size=args.img_size, device=device)
+        model = build_timm_baseline(
+            name, num_classes=100, img_size=args.img_size, device=device)
         n_params = _count_params(model)
         print(f"Trainable parameters: {n_params:,}")
 

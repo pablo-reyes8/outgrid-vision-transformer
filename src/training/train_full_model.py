@@ -27,8 +27,14 @@ def train_model(
     epochs: int = 100,             
     val_loader=None,
     device: str = "cuda",
+    optimizer_name: str = "adamw",
     lr: float = 5e-4,
     weight_decay: float = 0.05,
+    optimizer_betas: tuple[float, float] = (0.9, 0.999),
+    optimizer_eps: float = 1e-8,
+    optimizer_momentum: float = 0.9,
+    optimizer_nesterov: bool = False,
+    scheduler_name: str = "warmup_cosine",
     autocast_dtype: str = "bf16",   
     use_amp: bool = True,
     grad_clip_norm: float | None = 1.0,
@@ -52,18 +58,37 @@ def train_model(
 
     model.to(device)
 
-    # Optimizer
     param_groups = build_param_groups_no_wd(model, weight_decay=weight_decay)
-    optimizer = torch.optim.AdamW(param_groups, lr=lr, betas=(0.9, 0.999), eps=1e-8)
+    optimizer_key = optimizer_name.lower()
+    if optimizer_key == "adamw":
+        optimizer = torch.optim.AdamW(
+            param_groups, lr=lr, betas=optimizer_betas, eps=optimizer_eps)
+    elif optimizer_key == "adam":
+        optimizer = torch.optim.Adam(
+            param_groups, lr=lr, betas=optimizer_betas, eps=optimizer_eps)
+    elif optimizer_key == "sgd":
+        optimizer = torch.optim.SGD(
+            param_groups,
+            lr=lr,
+            momentum=optimizer_momentum,
+            nesterov=optimizer_nesterov)
+    else:
+        raise ValueError("optimizer_name must be one of: adamw, adam, sgd")
 
-    # Scheduler warmup + cosine (step-based)
     total_steps = epochs * len(train_loader)
     warmup_steps = int(total_steps * warmup_ratio)
-    scheduler = WarmupCosineLR(
-        optimizer,
-        total_steps=total_steps,
-        warmup_steps=warmup_steps,
-        min_lr=min_lr)
+    scheduler_key = scheduler_name.lower()
+    if scheduler_key == "warmup_cosine":
+        scheduler = WarmupCosineLR(
+            optimizer,
+            total_steps=total_steps,
+            warmup_steps=warmup_steps,
+            min_lr=min_lr)
+    elif scheduler_key in ("none", "constant"):
+        scheduler = None
+        warmup_steps = 0
+    else:
+        raise ValueError("scheduler_name must be 'warmup_cosine', 'constant', or 'none'")
 
     # AMP scaler (solo para fp16).
     scaler = None
@@ -137,7 +162,9 @@ def train_model(
     print(f"device={device} | amp={use_amp} | autocast_dtype={autocast_dtype} | channels_last={channels_last}")
     print(f"epochs={epochs} | steps/epoch={len(train_loader)} | total_steps={total_steps} | warmup_steps={warmup_steps}")
     print(f"batch_size={bs0} | input_shape={img_shape} | num_classes={num_classes}")
-    print(f"opt=AdamW | lr={lr} | wd={weight_decay} | grad_clip_norm={grad_clip_norm}")
+    print(
+        f"opt={optimizer_key} | scheduler={scheduler_key} | "
+        f"lr={lr} | wd={weight_decay} | grad_clip_norm={grad_clip_norm}")
     print(f"aug: mix_prob={mix_prob} | mixup_alpha={mixup_alpha} | cutmix_alpha={cutmix_alpha} | label_smoothing={label_smoothing}")
     if val_loader is not None:
         print(f"early_stop={early_stop} | metric={metric} | patience={patience} | min_delta={early_stop_min_delta}")

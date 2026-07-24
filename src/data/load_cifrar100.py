@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 from torchvision.transforms import RandAugment
 import random
@@ -26,6 +26,10 @@ def get_cifar100_datasets(
     random_erasing_p: float = 0.25,
     erasing_scale=(0.02, 0.20),
     erasing_ratio=(0.3, 3.3),
+    random_crop: bool = True,
+    horizontal_flip: bool = True,
+    randaugment: bool = True,
+    random_erasing: bool = True,
     img_size: int = 32,
     seed: int = 7):
     
@@ -45,18 +49,22 @@ def get_cifar100_datasets(
     if img_size != 32:
         train_ops.append(transforms.Resize(img_size, interpolation=transforms.InterpolationMode.BICUBIC))
 
+    if random_crop:
+        train_ops.append(transforms.RandomCrop(img_size, padding=crop_padding))
+    if horizontal_flip:
+        train_ops.append(transforms.RandomHorizontalFlip())
+    if randaugment:
+        train_ops.append(RandAugment(num_ops=ra_num_ops, magnitude=ra_magnitude))
     train_ops += [
-        transforms.RandomCrop(img_size, padding=crop_padding),
-        transforms.RandomHorizontalFlip(),
-        RandAugment(num_ops=ra_num_ops, magnitude=ra_magnitude),
         transforms.ToTensor(),
-        transforms.Normalize(cifar100_mean, cifar100_std),
-        transforms.RandomErasing(
+        transforms.Normalize(cifar100_mean, cifar100_std),]
+    if random_erasing:
+        train_ops.append(transforms.RandomErasing(
             p=random_erasing_p,
             scale=erasing_scale,
             ratio=erasing_ratio,
             value="random",
-        ),]
+        ))
     train_transform = transforms.Compose(train_ops)
 
     test_ops = []
@@ -70,20 +78,23 @@ def get_cifar100_datasets(
 
     full_train_dataset = datasets.CIFAR100(
         root=data_dir, train=True, download=True, transform=train_transform)
+    full_val_dataset = datasets.CIFAR100(
+        root=data_dir, train=True, download=True, transform=test_transform)
     
     test_dataset = datasets.CIFAR100(
         root=data_dir, train=False, download=True, transform=test_transform)
 
     if val_split > 0.0:
+        if not 0.0 < val_split < 1.0:
+            raise ValueError(f"val_split must be in [0, 1). Got {val_split}.")
         n_total = len(full_train_dataset)
         n_val = int(n_total * val_split)
-        n_train = n_total - n_val
-
-        split_gen = torch.Generator().manual_seed(seed)  # <-- fijo
-        train_dataset, val_dataset = random_split(
-            full_train_dataset,
-            [n_train, n_val],
-            generator=split_gen,)
+        indices = torch.randperm(
+            n_total, generator=torch.Generator().manual_seed(seed)).tolist()
+        val_indices = indices[:n_val]
+        train_indices = indices[n_val:]
+        train_dataset = Subset(full_train_dataset, train_indices)
+        val_dataset = Subset(full_val_dataset, val_indices)
         
     else:
         train_dataset = full_train_dataset
@@ -105,7 +116,12 @@ def get_cifar100_dataloaders(
     ra_num_ops: int = 2,
     ra_magnitude: int = 7,
     random_erasing_p: float = 0.25,
+    random_crop: bool = True,
+    horizontal_flip: bool = True,
+    randaugment: bool = True,
+    random_erasing: bool = True,
     img_size: int = 32,
+    drop_last: bool = False,
     seed: int = 7):
 
     """
@@ -120,10 +136,13 @@ def get_cifar100_dataloaders(
         ra_num_ops=ra_num_ops,
         ra_magnitude=ra_magnitude,
         random_erasing_p=random_erasing_p,
+        random_crop=random_crop,
+        horizontal_flip=horizontal_flip,
+        randaugment=randaugment,
+        random_erasing=random_erasing,
         img_size=img_size,
         seed=seed)
 
-    dl_gen = torch.Generator().manual_seed(seed)
     worker_init_fn = _seed_worker_factory(seed)
 
     train_loader = DataLoader(
@@ -133,7 +152,8 @@ def get_cifar100_dataloaders(
         num_workers=num_workers,
         pin_memory=pin_memory,
         persistent_workers=(num_workers > 0),
-        generator=dl_gen,               
+        drop_last=drop_last,
+        generator=torch.Generator().manual_seed(seed + 1),
         worker_init_fn=worker_init_fn)
 
     val_loader = None
@@ -146,7 +166,7 @@ def get_cifar100_dataloaders(
             pin_memory=pin_memory,
             persistent_workers=(num_workers > 0),
             worker_init_fn=worker_init_fn,
-            generator=dl_gen,)
+            generator=torch.Generator().manual_seed(seed + 2),)
 
     test_loader = DataLoader(
         test_ds,
@@ -156,7 +176,7 @@ def get_cifar100_dataloaders(
         pin_memory=pin_memory,
         persistent_workers=(num_workers > 0),
         worker_init_fn=worker_init_fn,
-        generator=dl_gen)
+        generator=torch.Generator().manual_seed(seed + 3))
 
     return train_loader, val_loader, test_loader
 

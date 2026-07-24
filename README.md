@@ -220,8 +220,15 @@ Prebuilt configs:
 - `configs/cifar100_model_b.yaml`
 - `configs/svhn_model_a.yaml`
 - `configs/tinyimagenet200_model_a.yaml`
+- `configs/cifar100_baseline.yaml` (template for the canonical timm baselines)
 
 `configs/train.yaml` is an alias of the CIFAR-100 Model A config.
+
+The YAML is the source of truth for model, data augmentation, training and
+runtime settings. `runtime.seed` is applied before creating both the model and
+the dataloaders. Validation uses deterministic evaluation transforms, and
+`runtime.load_best_for_test: true` reloads the best validation checkpoint
+before reporting test metrics.
 
 ## Training (Model A)
 
@@ -231,6 +238,33 @@ python scripts/train.py --config configs/cifar100_model_a_7m.yaml
 # or
 python scripts/train.py --config configs/cifar100_model_a_14m.yaml
 ```
+
+The same pipeline can be called directly from a notebook:
+
+```python
+from src.experiment import prepare_experiment, run_experiment
+
+# Inspect model/loaders without starting training.
+experiment = prepare_experiment("configs/cifar100_model_a_7m.yaml")
+
+# Run training and test the selected best checkpoint.
+result = run_experiment("configs/cifar100_model_a_7m.yaml")
+print(result["test_metrics"])
+```
+
+For a timm baseline, edit only `model.name` in
+`configs/cifar100_baseline.yaml`. Valid canonical names are defined by
+`src.timm_baselines.list_timm_baselines()`:
+
+- `deit_tiny_patch4`
+- `deit_small_patch4`
+- `swin_tiny_patch2`
+- `convnext_tiny_cifar`
+- `efficientnetv2_s_cifar`
+- `maxvit_nano_cifar`
+- `maxvit_tiny_cifar`
+- `resnet18_cifar`
+- `resnet50_cifar`
 
 ## Baseline Comparisons (CIFAR-32)
 

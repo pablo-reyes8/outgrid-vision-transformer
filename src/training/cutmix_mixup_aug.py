@@ -14,6 +14,21 @@ def soft_target_cross_entropy(logits: torch.Tensor, targets_soft: torch.Tensor) 
     return -(targets_soft * logp).sum(dim=1).mean()
 
 
+def smooth_soft_targets(
+    targets_soft: torch.Tensor, label_smoothing: float
+) -> torch.Tensor:
+    """Apply label smoothing without discarding Mixup/CutMix soft targets."""
+    if not 0.0 <= label_smoothing <= 1.0:
+        raise ValueError("label_smoothing must be in [0, 1]")
+    if label_smoothing == 0.0:
+        return targets_soft
+    num_classes = targets_soft.shape[-1]
+    return (
+        targets_soft * (1.0 - label_smoothing)
+        + label_smoothing / float(num_classes)
+    )
+
+
 def apply_mixup_cutmix(
     images: torch.Tensor,
     targets: torch.Tensor,

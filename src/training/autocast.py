@@ -2,18 +2,24 @@ import os
 import random
 import inspect
 from contextlib import contextmanager, nullcontext
+import numpy as np
 import torch
 
 
-def seed_everything(seed: int = 0, deterministic: bool = False):
+def seed_everything(seed: int = 0, deterministic: bool = True):
+    """Seed Python, NumPy and Torch before datasets and models are created."""
     random.seed(seed)
+    np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    if hasattr(torch, "use_deterministic_algorithms"):
+        torch.use_deterministic_algorithms(deterministic, warn_only=True)
     if deterministic:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     else:
+        torch.backends.cudnn.deterministic = False
         torch.backends.cudnn.benchmark = True
 
 

@@ -78,6 +78,10 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Experimental notebooks are local working files. Reproducible runs live in
+# configs/ and src/experiment.py.
+training_notebooks/
+
 # IPython
 profile_default/
 ipython_config.py
